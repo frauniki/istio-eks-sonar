@@ -1,0 +1,46 @@
+name: release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+
+      - name: Install gobump
+        run: go install github.com/x-motemen/gobump/cmd/gobump@latest
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+          VERSION=${GITHUB_REF#refs/tags/}
+
+          gobump set ${VERSION#v} -w
+          echo ::set-output name=VERSION::$VERSION
+
+      - name: Commit updates
+        uses: EndBug/add-and-commit@v9
+        with:
+          new_branch: master
+          message: "[release] bump up ${{ steps.bump_version.outputs.VERSION }}"
+          add: "version.go"
+          tag: "${{ steps.bump_version.outputs.VERSION }} --force"
+          tag_push: "--force"
+
+      - name: Build
+        run: make build_all
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
