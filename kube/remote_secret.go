@@ -17,6 +17,10 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
+const (
+	selfKubeconfigSecretName = "istio-kubeconfig"
+)
+
 func getK8sConfig() (*rest.Config, error) {
 	config, err := rest.InClusterConfig()
 	if err == nil {
@@ -53,13 +57,21 @@ func CreateRemoteSecrets(ctx context.Context, config *config.GenerateConfig, rem
 			b64EncodedKubeconfig := make([]byte, base64.StdEncoding.EncodedLen(len(kubeconfigBytes)))
 			base64.StdEncoding.Encode(b64EncodedKubeconfig, kubeconfigBytes)
 
+			secretName := config.SecretNamePrefix + clusterName
+			key := clusterName
+			// for istio external control plane
+			if clusterName == config.ClusterName {
+				secretName = selfKubeconfigSecretName
+				key = "config"
+			}
+
 			resp, err := clientset.CoreV1().Secrets(namespace).Create(ctx, &v1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: config.SecretNamePrefix + clusterName,
+					Name: secretName,
 				},
 				Type: v1.SecretTypeOpaque,
 				Data: map[string][]byte{
-					clusterName: b64EncodedKubeconfig,
+					key: b64EncodedKubeconfig,
 				},
 			}, metav1.CreateOptions{})
 			if err != nil {

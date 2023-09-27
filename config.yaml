@@ -1,11 +1,11 @@
 secretNamePrefix: remote-secret-
-targetNamespace: [default]
+targetNamespaces: [default]
 
 eksClusters:
-  - assumeRole: arn:aws:iam::123456789012:role/eks-admin
+  - assumeRoleARN: arn:aws:iam::123456789012:role/eks-admin
     clusters: [hoge]
 
-execTemplateConfig:
+execTemplate:
   apiVersion: client.authentication.k8s.io/v1beta1
   args: [token, -i, "{{ .clusterName }}"]
   env:

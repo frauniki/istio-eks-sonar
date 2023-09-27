@@ -21,8 +21,8 @@ func GenerateKubeconfigs(ctx context.Context, config *config.GenerateConfig) (ma
 
 	for _, eksCluster := range config.EKSClusters {
 		innerCfg := cfg
-		if eksCluster.AssumeRole != "" {
-			assumeRole(&innerCfg, eksCluster.AssumeRole)
+		if eksCluster.AssumeRoleARN != "" {
+			assumeRole(&innerCfg, eksCluster.AssumeRoleARN)
 		}
 		eksClient := eks.NewFromConfig(innerCfg)
 
@@ -33,7 +33,7 @@ func GenerateKubeconfigs(ctx context.Context, config *config.GenerateConfig) (ma
 			if err != nil {
 				return nil, err
 			}
-			kubeconfig, err := genKubeconfig(config.ExecTemplateConfig, cluster, []byte(*resp.Cluster.CertificateAuthority.Data), *resp.Cluster.Endpoint)
+			kubeconfig, err := genKubeconfig(config.ExecTemplate, cluster, []byte(*resp.Cluster.CertificateAuthority.Data), *resp.Cluster.Endpoint)
 			if err != nil {
 				return nil, err
 			}
@@ -44,12 +44,8 @@ func GenerateKubeconfigs(ctx context.Context, config *config.GenerateConfig) (ma
 	return kubeconfigs, nil
 }
 
-func genKubeconfig(execConfig config.ExecTemplateConfig, clusterName string, caData []byte, server string) (*api.Config, error) {
-	templateData := make(map[string]string, len(execConfig.Data)+1)
-	for k, v := range execConfig.Data {
-		templateData[k] = v
-	}
-	templateData["clusterName"] = clusterName
+func genKubeconfig(execConfig config.ExecTemplate, clusterName string, caData []byte, server string) (*api.Config, error) {
+	templateData := map[string]string{"clusterName": clusterName}
 
 	command, err := templateExec(execConfig.Command, templateData)
 	if err != nil {
